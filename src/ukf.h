@@ -17,7 +17,7 @@ public:
 
   const int dim_x = 5; // the state dimension
   const int dim_x_joint = 7; // the dimension of the joint of x and linear acceleration-angular accelration
-  const double inf_variance = .05;
+  const double inf_variance = .1;
   
   // Sigma-point weights - related parameters...
   //const double beta = 6; 
