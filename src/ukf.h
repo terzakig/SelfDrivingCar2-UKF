@@ -116,7 +116,8 @@ public:
    * Updates the state and the state covariance matrix using a laser measurement
    * @param meas_package The measurement at k+1
    */
-  inline static double UpdateRadar(const MeasurementPackage& pack,
+  
+  static double UpdateRadar(const MeasurementPackage& pack,
 				 const MatrixXd& Xsig,  // The predicted/prior distribution as points along 
 						        // the covariance matrix principal directions.
 				 const VectorXd& x,     // The prior mean
@@ -130,124 +131,11 @@ public:
 				 double beta,
 				 double kappa,
 				 double gamma = 0      // A regularization parameter (employed by iterative updates) 
-				) 
-  {
-    
-    assert(pack.sensor_type_ == MeasurementPackage::RADAR);
-    // skip update if degenrate measurement
-    if (fabs(pack.raw_measurements_[0]) < 0.00001) {
-     
-      x_post = x;
-      Sigma_post = Sigma;
-      
-      return 0; 
-    }
-    
-    //set state dimension
-    const int dim_x = 5;
-    const int dim_joint = dim_x + 2; // this should be the dimension of the joint!!!!
-    
-    //Joint sigma points
-    const int n_joint_sigma_points = 2 * dim_joint + 1;
-    
-    assert(Xsig.rows() == dim_x && Xsig.cols() ==  n_joint_sigma_points);
-    assert(x.size() == dim_x);
-    
-    //measurement dimension
-    const int dim_z = pack.raw_measurements_.size();
-
-    // shortcut for the measurement vector
-    VectorXd z = pack.raw_measurements_;
-    
-    //The lambda par5ameter (need to look into this rfeally...)
-    double lambda = 3 - dim_joint;
-
-    double alpha_sq = (lambda + dim_joint) / (dim_joint + kappa);
-    
-    // Create storage for the predicted measurement sigma-points
-    MatrixXd Zsig = MatrixXd(dim_z, n_joint_sigma_points);
-
-    //mean predicted measurement
-    VectorXd z_pred = VectorXd::Zero(dim_z);
+				); 
   
-    //Run the sigma points through the measurement model 
-    double w_m[n_joint_sigma_points]; // mean weights ...
-    double w_c[n_joint_sigma_points]; // covariance weights ...
-    
-    for (int i = 0; i < n_joint_sigma_points; i++) {
-      // get the weight out of the way first...
-      if (i == 0) {
-	
-	w_m[i] = lambda / (lambda + dim_joint);
-	w_c[i] = w_m[i] + (1 - alpha_sq) + beta;
-      
-      } else 
-	w_m[i] = w_c[i] = 0.5 / (lambda + dim_joint);
-      
-      // Npw get the state in named variables
-      double px = (1 / sqrt(1 + gamma) ) * Xsig(0, i),
-             py = (1 / sqrt(1 + gamma) ) * Xsig(1, i),
-             v = (1 / sqrt(1 + gamma) ) * Xsig(2, i),
-             phi = (1 / sqrt(1 + gamma) ) * Xsig(3, i);
-      double theta = (1 / sqrt(1 + gamma) ) * atan2(py, px);
-      
-      double vx = v * cos(phi),
-             vy = v * sin(phi);
-             
-   // 2. Now storing ne
-      double rho = sqrt(px * px + py * py);
-      double rho_dot = rho > 0.0001 ? (vx * px + vy * py) / rho : 0;
-      
-      Zsig(0, i) = rho;
-      Zsig(1, i) = theta;
-      Zsig(2, i) = rho_dot;
-      
-      z_pred += w_m[i] * Zsig.col(i);
-      //std::cout<<"Zsig currently : "<<std::endl<<Zsig<<std::endl;
-  }
-
-  
-  // Now, S is the so-called "predicted measurement covariance".
-  // NOTE: What S actually is, is the covariance matrix of the measurfement variable
-  //       in the joint distrbution of the measurement likelihood and the prior. 
-  MatrixXd S = MatrixXd::Zero(dim_z, dim_z);
-
-  for (int i = 0; i < n_joint_sigma_points; i++) 
-    S += w_c[i] * (Zsig.col(i) - z_pred) * (Zsig.col(i) - z_pred).transpose();  
-  
-  
-  // And lastly, add the likelihood noise variances straight to the diagonal
-  S(0, 0) += std_radr * std_radr;
-  S(1, 1) += std_radphi * std_radphi;
-  S(2, 2) += std_radrd * std_radrd;
-   
-  // Print the darn S...
-  //std::cout<<"S : "<<std::endl<<S<<std::endl;
-  
-   // 2. Now storing new state mean and covariance
-  // Cross-correlation matrix Tc 
-  MatrixXd Sigma_xz = MatrixXd::Zero(dim_x, dim_z);
-
-
-  //calculate cross correlation matrix
-  for (int i = 0; i < n_joint_sigma_points; i++) 
-      Sigma_xz += w_c[i] * (Xsig.col(i) - x) *(Zsig.col(i) - z_pred).transpose(); 
-  
-  //calculate Kalman gain K;
-  MatrixXd K = Sigma_xz * S.inverse();
-  
-  //update state mean and covariance matrix
-  x_post = x + K * (z - z_pred);
-  Sigma_post = Sigma - K*S*K.transpose();
-
-  return (z - z_pred).dot( S.inverse() * (z - z_pred) );
-
-  }
 				 
-
-				 
-  // Do the Lidar update				
-  inline static double UpdateLidar(const MeasurementPackage& pack,
+// Do the Lidar update				
+  static double UpdateLidar(const MeasurementPackage& pack,
 				 const MatrixXd& Xsig,  // The predicted/prior distribution as points along 
 						        // the covariance matrix principal directions.
 				 VectorXd& x,     // The state mean
@@ -256,108 +144,9 @@ public:
 				 double std_laspy,     // Lidar py stdev
 				 double beta,
 				 double kappa
-				 ) 
-  {
-    
-    assert(pack.sensor_type_ == MeasurementPackage::LASER);
-    
-    // skip if bad measurement
-    if (pack.raw_measurements_[0] * pack.raw_measurements_[0] + 
-        pack.raw_measurements_[1] * pack.raw_measurements_[1] < 0.00001) return 0;
-    
-    //set state dimension
-    const int dim_x = 5;
- 
-    
-    const int dim_joint = dim_x + 2;
-    
-    
-    //number of joint sigma points
-    const int n_joint_sigma_points = 2 * dim_joint + 1;
-
-    assert(x.size() == dim_x);
-    assert(Xsig.rows() == dim_x && Xsig.cols() == n_joint_sigma_points);
-    
-    //measurement dimension
-    const int dim_z = pack.raw_measurements_.size();
-
-    // shortcut name for the measurement vector
-    VectorXd z = pack.raw_measurements_;
-    
-    //define spreading parameter
-    double lambda = 3 - dim_joint;
-    
-    // The α^2 parameter
-    double alpha_sq = (lambda + dim_joint) / (dim_joint + kappa);
-    
-    // Create storage for the predicted measurement sigma-points
-    MatrixXd Zsig = MatrixXd(dim_z, n_joint_sigma_points);
-
-    //mean predicted measurement
-    VectorXd z_pred = VectorXd::Zero(dim_z);
+				 ); 
+				 
   
-    //Now run the sigma points through the measurement model equations
-    double w_m[n_joint_sigma_points]; // mean weights
-    double w_c[n_joint_sigma_points]; // covariance weights
-    
-    for (int i = 0; i < n_joint_sigma_points; i++) {
-      // compute the weight first thing...
-      if (i == 0) {
-	
-	w_m[i] = lambda / (lambda + dim_joint);
-	w_c[i] = w_m[i] + (1 - alpha_sq + beta);
-      
-      } else 
-	w_m[i] = w_c[i] = 0.5 / (lambda + dim_joint);
-      
-      // Now obtaining the predicted values for position
-      double px =  Xsig(0, i),
-             py = Xsig(1, i);
-             
-      Zsig(0, i) = px;
-      Zsig(1, i) = py;
-      
-      z_pred += w_m[i] * Zsig.col(i);
-      //std::cout<<"Zsig currently : "<<std::endl<<Zsig<<std::endl;
-  }
-
-  // Now do the "predicted measurement" covariance, S (essentially the Z-block in the z, x joint)
-  //NOTE: S is the covariance of the measurement variable (say, y to distinguish from the instantiation, z)
-  //      in the joint distribution of the measurement likelihood with the prior.
-  MatrixXd S = MatrixXd::Zero(dim_z, dim_z);
-  for (int i = 0; i < n_joint_sigma_points; i++) 
-    S += w_c[i] * (Zsig.col(i) - z_pred) * (Zsig.col(i) - z_pred).transpose();  
-  
-    
-  // And lastly, add the likelihood noise variances straight to the diagonal
-  S(0, 0) += std_laspx * std_laspx;
-  S(1, 1) += std_laspy * std_laspy;
-  
-    
-  // print the darn thing...
-  std::cout<<"S : "<<std::endl<<S<<std::endl;
-  
-   // 2. Now obtaining new state mean and covariance
-  // Cross-correlation matrix Sigma_xz 
-  MatrixXd Sigma_xz = MatrixXd::Zero(dim_x, dim_z);
-  //calculate cross correlation matrix
-  for (int i = 0; i < n_joint_sigma_points; i++) 
-      Sigma_xz += w_c[i] * (Xsig.col(i) - x) *(Zsig.col(i) - z_pred).transpose(); 
-  
-  //calculate Kalman gain K;
-  MatrixXd K = Sigma_xz * S.inverse();
-  
-  //std::cout<<"K : "<<std::endl<<S<<std::endl;
-  //std::cout<<"K*S*K' : "<<std::endl<<K*S*K.transpose()<<std::endl;
-  //std::cout<<"Sigma : "<<std::endl<<Sigma<<std::endl;
-  //update state mean and covariance matrix
-  x = x + K * (z - z_pred);
-  Sigma = Sigma - K*S*K.transpose();
-  
-  // return the NIS
-  return (z - z_pred).dot( S.inverse() * (z - z_pred) );
-  
-  }
 
   // The update 
   void Update(const MeasurementPackage&);
@@ -446,7 +235,9 @@ private:
     // 3. Now filling the sigma-point matrix of the joint distribution
     VectorXd x_joint(dim_joint);
     x_joint.segment<dim_x>(0) = x;
-    x_joint.col(0).segment<2>(dim_x) << 0, 0;
+    x_joint[dim_x] = 0;
+    x_joint[dim_x + 1] = 0;
+    
     Xsig_joint.col(0) = x_joint;
     
     // And the rest of the columns now...
