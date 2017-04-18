@@ -628,3 +628,100 @@ double UKF::UpdateRadar(const MeasurementPackage& pack,
   return (z - z_pred).dot( Sinv * (z - z_pred) );
   
   }
+  
+  // Generate the Sigma points given a prior and covariance matrix
+  void UKF::GenerateSigmaPoints(const VectorXd& x,      // state mean
+				         const MatrixXd& Sigma, // state covariance
+				         MatrixXd& Xsig_out  // reference to sigma point matrix
+ 				    ) 
+  {
+
+	    //set state dimension
+	    const int dim_x = x.size();
+  
+	    // number if sigma points
+	    const int n_sigma_points = 2 * dim_x + 1;
+  
+	    //define spreading parameter
+	    double lambda = 3 - dim_x;
+
+	    //Cholesky decomposition of Sigma
+	    MatrixXd L = Sigma.llt().matrixL();
+	    /*Eigen::JacobiSVD<MatrixXd> svd(Sigma, Eigen::ComputeFullU | Eigen::ComputeFullV);
+	    MatrixXd L = svd.matrixU();
+	    VectorXd ss = svd.singularValues();
+	    for (int i = 0; i<dim_x; i++) {
+	      L.col(i) *= sqrt(ss[i]);
+	      //std::cout<<"singular value : "<<ss[i]<<std::endl;
+	      
+	    }*/
+	    
+	    
+	    if (Xsig_out.rows() != dim_x || Xsig_out.cols() != n_sigma_points) Xsig_out = MatrixXd(dim_x, n_sigma_points);
+	    
+	    
+	    // fill-in the columns of Xsig
+	    Xsig_out.col(0) = x;
+	    for (int i = 1; i < dim_x; i++) {
+    
+	      Xsig_out.col(1 + i) = x + sqrt(lambda + dim_x) * L.col(i);
+ 
+	      Xsig_out.col(1 + dim_x + i) = x - sqrt(lambda + dim_x) * L.col(i);
+	    }
+  
+  }
+  
+  // Incorporate the "noisy" accelerations in a joint distribution described by new sigma points
+  void UKF::GenerateJointSigmaPoints(const VectorXd& x,     // prior mean
+					      const MatrixXd& Sigma, // prior covariance
+					      double std_a,          // linear accelration standard deivation
+					      double std_omega_dot,      // angular accelration standard deviation
+					      MatrixXd& Xsig_joint  // The joint distribution sigma points
+					      )  
+  {
+    
+    const int dim_x = 5;
+    const int dim_joint = dim_x + 2;
+    const int n_joint_sigma_points = 2 * dim_joint + 1;
+    double lambda = 3 - dim_joint;
+    
+    // 1. Create the joint covariance matrix
+    MatrixXd Sigma_joint = MatrixXd::Zero(dim_joint, dim_joint);
+    Sigma_joint.block<dim_x, dim_x>(0, 0) = Sigma;
+    Sigma_joint(dim_x, dim_x) = std_a * std_a;  // linear acceleration along the vehicle axis ("longitudinal") variance
+    Sigma_joint(dim_x + 1, dim_x + 1) = std_omega_dot * std_omega_dot; // angular acceleration variance
+    // Joint covariance done...
+    
+    // 2. Decomposing the joint covariance matrix
+    // NOTE: This is redundant, because the ellipsoid gains simply two more axes uncorrelated with the existing ones
+    // and everything can be worked-out without the  additional Cholesky, but hey...
+    MatrixXd L = Sigma_joint.llt().matrixL();
+    // ************** SVD - L ********************
+    /*Eigen::JacobiSVD<MatrixXd> svd(Sigma_joint, Eigen::ComputeFullU | Eigen::ComputeFullV);
+    MatrixXd L = svd.matrixU();
+    VectorXd ss = svd.singularValues();
+    for (int i = 0; i<dim_x; i++) {
+      L.col(i) *= sqrt(ss[i]);
+      //std::cout<<"singular value : "<<ss[i]<<std::endl;
+	      
+    }*/
+    // ************** SVD - L ********************
+    if (Xsig_joint.rows() != dim_joint || Xsig_joint.cols() != n_joint_sigma_points) Xsig_joint = MatrixXd(dim_joint, n_joint_sigma_points);
+    
+    // 3. Now filling the sigma-point matrix of the joint distribution
+    VectorXd x_joint(dim_joint);
+    x_joint.segment<dim_x>(0) = x;
+    x_joint[dim_x] = 0;
+    x_joint[dim_x + 1] = 0;
+    
+    Xsig_joint.col(0) = x_joint;
+    
+    // And the rest of the columns now...
+    for (int i = 0; i < dim_joint; i++) {
+      
+      Xsig_joint.col(1 + i) = x_joint + sqrt(lambda + dim_joint) * L.col(i);
+      Xsig_joint.col(1 + dim_joint + i) = x_joint - sqrt(lambda + dim_joint) * L.col(i);
+      
+    }
+    // Done ...
+  }
