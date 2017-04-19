@@ -662,11 +662,12 @@ double UKF::UpdateRadar(const MeasurementPackage& pack,
 	    
 	    // fill-in the columns of Xsig
 	    Xsig_out.col(0) = x;
-	    for (int i = 1; i < dim_x; i++) {
+	    for (int i = 0; i < dim_x; i++) {
     
 	      Xsig_out.col(1 + i) = x + sqrt(lambda + dim_x) * L.col(i);
  
 	      Xsig_out.col(1 + dim_x + i) = x - sqrt(lambda + dim_x) * L.col(i);
+	      std::cout<<"Xsig_out : "<<std::endl<<Xsig_out<<std::endl;
 	    }
   
   }
