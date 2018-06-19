@@ -3,6 +3,13 @@ Sigma-Point filtering for Moving Object Tracking using Lidar and Radar processed
 
 # AN EKF filter for position tracking using LIDAR and RADAR processed measurements
 
+## An IMPORTANT note about on the UKF...
+
+It seems that a lot of people think of the UKF as the most plausible solution to non-linear measurement likelihoods. Being a computer vision guy, I **strongly disagree** with this view. The UKF is highly susceptible to the choice of sigma points and therefore can easily lose its track. Thus, it is a method that **hardly generalizes** from case to another, that is, **assuming you are lucky enough** to have tuned the filter correctly. 
+
+Most control engineers disregard the fact that the **EKF formulation** is eqivalent to a Gauss-Newton method. This means that the state estimnate can be obtained **iteratively** to arbitrary accuracy, usually within a few iterations. So, instead of using the UKF, please try this repository which contains an **iteratve EKF using the Levenberg - Marquardt algorithm to improve the Gauss-Newton iteration**: https://github.com/terzakig/SelfDrivingCar2-EKF
+
+
 
 ## Compiling and Executing
 Compling and running should be straightforward (I have included the test files in the build directory):
