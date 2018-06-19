@@ -1,7 +1,7 @@
 # SelfDrivingCar2-UKF
 Sigma-Point filtering for Moving Object Tracking using Lidar and Radar processed neasurements
 
-# AN EKF filter for position tracking using LIDAR and RADAR processed measurements
+# A UKF filter for position tracking using LIDAR and RADAR processed measurements
 
 ## An IMPORTANT note about on the UKF...
 
