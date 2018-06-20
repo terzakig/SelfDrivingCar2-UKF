@@ -3,12 +3,11 @@ Sigma-Point filtering for Moving Object Tracking using Lidar and Radar processed
 
 # A UKF filter for position tracking using LIDAR and RADAR processed measurements
 
-## An IMPORTANT note about on the UKF...
+## An IMPORTANT note on the UKF...
 
 It seems that a lot of people think of the UKF as the most plausible solution to non-linear measurement likelihoods. Being a computer vision guy myself, I **strongly disagree** with this view. The UKF is highly susceptible to the choice of sigma-points and therefore can easily lose its track. Thus, it is a method that **hardly generalizes**, that is, **assuming you are lucky enough** to have tuned the filter correctly. 
 
-Most control engineers disregard the fact that the **EKF formulation** is equivalent to a Gauss-Newton method setup (i.e., non-linear Least Squares). This means that the state estimnate can be **refined iteratively** to arbitrary accuracy, usually within a few iterations. So, instead of using the UKF, please try this repository co an **iteratve EKF using the Levenberg - Marquardt algorithm to improve the Gauss-Newton iteration**: https://github.com/terzakig/SelfDrivingCar2-EKF
-The iterative EKF is **robust to pretty much any reasonable random initialization of the initial state** and converges with high accuracy in no more than 5-6 steps filter step. 
+Most control engineers disregard the fact that the **EKF formulation** is equivalent to a Gauss-Newton method setup (i.e., non-linear Least Squares). This means that the state estimnate can be **refined iteratively** to arbitrary accuracy, usually within a few iterations. So, instead of using the UKF, please try this repository on an **iteratve EKF using the Levenberg - Marquardt algorithm to improve the Gauss-Newton iteration**: https://github.com/terzakig/SelfDrivingCar2-EKF . The iterative EKF is **robust to pretty much any reasonable random initialization of the initial state** and converges with high accuracy in no more than 5-6 steps filter step. 
 
 
 ## Compiling and Executing
